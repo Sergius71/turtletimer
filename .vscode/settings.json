@@ -1,0 +1,6 @@
+{
+    "terminal.integrated.env.osx": {
+        "PATH": "/Users/sergiy/.platformio/penv/bin:/Users/sergiy/.platformio/penv:/usr/local/opt/node@6/bin:/usr/local/opt/gnu-tar/libexec/gnubin:/Users/sergiy/.pyenv/bin:/Users/sergiy/.pyenv/shims:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/Wireshark.app/Contents/MacOS",
+        "PLATFORMIO_CALLER": "vscode"
+    }
+}
