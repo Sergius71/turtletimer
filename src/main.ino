@@ -5,11 +5,17 @@
 #define SHOW_TIME 0
 #define SHOW_LAMP_STATUS 1
 
+#define L_MENU_MARGIN 0
+#define R_MENU_MARGIN 3
+
+uint8_t uparrow[8] = {0x4, 0xe, 0x15, 0x4, 0x4, 0x4, 0x0};
+uint8_t downarrow[8] = {0x4, 0x4, 0x4, 0x15, 0xe, 0x4, 0x0};
+
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-int screen_refresh = 1;
+volatile int screen_refresh = 1;
 
-volatile int displayState;
+volatile int8_t displayState;
 volatile int incrementor;
 volatile int dr2;
 volatile int dr3;
@@ -24,6 +30,7 @@ class Displays {
 
         void renderScreen() {
             lcd.clear();
+            //lcd.scrollDisplayLeft();
             for (int i = 0; i <= 3; ++i) {
                 lcd.setCursor(0, i);
                 lcd.print(this->screen[i]);
@@ -51,7 +58,6 @@ class Displays {
 
         void screenLampStatus()
         {
-            lcd.clear();
             sprintf(screen[0], "Lapm 1 Off");
             sprintf(screen[1], "Lamp 2 Off");
             sprintf(screen[2], "Lamp 3 Off");
@@ -60,24 +66,37 @@ class Displays {
             this->renderScreen();
         }
 
+        void screenNextActions()
+        {
+            sprintf(screen[0], "L1 %c%02d:%02d L5 %c%02d:%02d", (char)1, 7, 0, (char)1, 7, 0);
+            sprintf(screen[1], "L2 %c%02d:%02d L6 %c%02d:%02d", (char)2, 20, 30, (char)2, 20, 30);
+            sprintf(screen[2], "L3 %c%02d:%02d", (char)223, 7, 0);
+            sprintf(screen[3], "L4 %c%02d:%02d", (char)223, 7, 0);
+            
+            this->renderScreen();
+        }
+
     typedef void (Displays::*GeneralFunction) ();
 
-    static const GeneralFunction doActionsArray [3];
+    static const GeneralFunction doActionsArray [4];
 
 };
 
 
-const Displays::GeneralFunction Displays::doActionsArray [3] =
+const Displays::GeneralFunction Displays::doActionsArray [4] =
 {
-    &Displays::screenWelcome, 
-    &Displays::screenDateTime, 
-    &Displays::screenLampStatus, 
+    &Displays::screenWelcome,
+    &Displays::screenDateTime,
+    &Displays::screenLampStatus,
+    &Displays::screenNextActions,
 };
 
 Displays turtleScreen;
 
 void setup()
 {
+    lcd.createChar(1, uparrow);
+    lcd.createChar(2, downarrow);
     displayState = 0;
 
     pinMode(2, INPUT);
@@ -95,38 +114,24 @@ void setup()
 
 void loop()
 {
-    int l_margin = 1;
-    int r_margin = 2;
     if (screen_refresh) {
         Displays::GeneralFunction f = Displays::doActionsArray [displayState];
         (turtleScreen.*f) ();
         screen_refresh = 0;
-    }
-
-    if (incrementor == 1 && displayState < r_margin) {
-        displayState += incrementor;
-        screen_refresh = 1;
-    } else if (incrementor == -1 && displayState > l_margin) {
-        displayState += incrementor;
-        screen_refresh = 1;
-    }
-    incrementor = 0;
-
-    if ((displayState < 1) || (displayState > 2))
-    {
-        displayState = 1;
-        screen_refresh = 1;
     }
 }
 
 void changeState_ISR()
 {
     int rotary_pin_B;
+    delay(10);
     rotary_pin_B = digitalRead(2);
 
-    if (rotary_pin_B == 0) {
-        incrementor = 1;
-    } else {
-        incrementor = -1;
+    if (rotary_pin_B == 1 && (displayState < R_MENU_MARGIN)) {
+        displayState++;
+        screen_refresh = 1;
+    } else if (rotary_pin_B == 0 && (displayState > L_MENU_MARGIN)) {
+        displayState--;
+        screen_refresh = 1;
     }
 }
