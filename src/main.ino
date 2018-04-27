@@ -2,10 +2,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <MD_DS3231.h>
 
-#define SHOW_TIME 0
-#define SHOW_LAMP_STATUS 1
-
-#define L_MENU_MARGIN 0
+#define L_MENU_MARGIN 1
 #define R_MENU_MARGIN 3
 
 #define LCD_LIGHT_TIMEOUT 10000
@@ -128,7 +125,10 @@ void setup()
 
     pinMode(2, INPUT);
     pinMode(3, INPUT);
+    pinMode(4, INPUT);
     attachInterrupt(digitalPinToInterrupt(3), changeState_ISR, RISING);
+    attachInterrupt(digitalPinToInterrupt(2), pushButton_ISR, RISING);
+    
 
     lcd.begin(20, 4);
 
@@ -152,8 +152,7 @@ void loop()
 void changeState_ISR()
 {
     int rotary_pin_B;
-    //delay(10);
-    rotary_pin_B = digitalRead(2);
+    rotary_pin_B = digitalRead(4);
 
     if (rotary_pin_B == 1 && (displayState < R_MENU_MARGIN)) {
         displayState++;
@@ -162,4 +161,9 @@ void changeState_ISR()
         displayState--;
         screen_refresh = true;
     }
+}
+
+void pushButton_ISR()
+{
+    screen_refresh = true;
 }
