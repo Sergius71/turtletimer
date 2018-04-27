@@ -8,12 +8,14 @@
 #define L_MENU_MARGIN 0
 #define R_MENU_MARGIN 3
 
+#define LCD_LIGHT_TIMEOUT 10000
+
 uint8_t uparrow[8] = {0x4, 0xe, 0x15, 0x4, 0x4, 0x4, 0x0};
 uint8_t downarrow[8] = {0x4, 0x4, 0x4, 0x15, 0xe, 0x4, 0x0};
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-volatile int screen_refresh = 1;
+volatile bool screen_refresh = false;
 
 volatile int8_t displayState;
 volatile int incrementor;
@@ -25,15 +27,40 @@ const int changeStatePin = 2;
 
 class Displays {
 
+    private:
+        bool backlightIsOn;
+        int32_t backlightOffTime;
+        unsigned long previousMillis, currentMillis;
+
     public:
         char screen[4][21];
 
         void renderScreen() {
             lcd.clear();
-            //lcd.scrollDisplayLeft();
+            this->backlightOn();
+            
             for (int i = 0; i <= 3; ++i) {
                 lcd.setCursor(0, i);
                 lcd.print(this->screen[i]);
+            }
+        }
+
+        void backlightOn()
+        {
+            lcd.backlight();
+            this->backlightIsOn = true;
+            this->previousMillis = millis();
+        }
+
+        void backlightCheck()
+        {
+            //if (this->backlightIsOn && this->backlightOffTime < millis())
+            this->currentMillis = millis();
+            if (this->backlightIsOn && 
+                ((unsigned long)(this->currentMillis - this->previousMillis) >= LCD_LIGHT_TIMEOUT))
+            {
+                lcd.noBacklight();
+                this->backlightIsOn = false;
             }
         }
 
@@ -104,11 +131,10 @@ void setup()
     attachInterrupt(digitalPinToInterrupt(3), changeState_ISR, RISING);
 
     lcd.begin(20, 4);
-    lcd.clear();
-    lcd.backlight();
 
     Displays::GeneralFunction f = Displays::doActionsArray [displayState++];
     (turtleScreen.*f) ();
+    screen_refresh = true;
     delay(1000);
 }
 
@@ -117,21 +143,23 @@ void loop()
     if (screen_refresh) {
         Displays::GeneralFunction f = Displays::doActionsArray [displayState];
         (turtleScreen.*f) ();
-        screen_refresh = 0;
+        screen_refresh = false;
     }
+
+    turtleScreen.backlightCheck();
 }
 
 void changeState_ISR()
 {
     int rotary_pin_B;
-    delay(10);
+    //delay(10);
     rotary_pin_B = digitalRead(2);
 
     if (rotary_pin_B == 1 && (displayState < R_MENU_MARGIN)) {
         displayState++;
-        screen_refresh = 1;
+        screen_refresh = true;
     } else if (rotary_pin_B == 0 && (displayState > L_MENU_MARGIN)) {
         displayState--;
-        screen_refresh = 1;
+        screen_refresh = true;
     }
 }
